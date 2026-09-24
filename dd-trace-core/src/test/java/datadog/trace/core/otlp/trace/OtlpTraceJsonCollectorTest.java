@@ -95,6 +95,12 @@ class OtlpTraceJsonCollectorTest {
         attrKeys.contains("http.method"),
         "renamed tag must not also appear under its Datadog name; got " + attrKeys);
     assertTrue(
+        attrKeys.contains("server.address"),
+        "canonical OpenTelemetry tag must pass through unchanged; got " + attrKeys);
+    assertTrue(
+        attrKeys.contains("server.port"),
+        "canonical OpenTelemetry tag must pass through unchanged; got " + attrKeys);
+    assertTrue(
         attrKeys.contains("custom.unregistered"),
         "a tag the registry does not name passes through unchanged; got " + attrKeys);
   }
@@ -113,6 +119,12 @@ class OtlpTraceJsonCollectorTest {
         "tag must not appear under its OpenTelemetry name when OTel semantics are disabled; got "
             + attrKeys);
     assertTrue(
+        attrKeys.contains("server.address"),
+        "canonical tag must pass through unchanged; got " + attrKeys);
+    assertTrue(
+        attrKeys.contains("server.port"),
+        "canonical tag must pass through unchanged; got " + attrKeys);
+    assertTrue(
         attrKeys.contains("custom.unregistered"),
         "a tag the registry does not name passes through unchanged; got " + attrKeys);
   }
@@ -128,6 +140,8 @@ class OtlpTraceJsonCollectorTest {
       AgentSpan agentSpan = TRACER.startSpan("test", "op.tagged");
       agentSpan.setResourceName("GET /api");
       agentSpan.setTag("http.method", "GET");
+      agentSpan.setTag("server.address", "example.com");
+      agentSpan.setTag("server.port", 443);
       agentSpan.setTag("custom.unregistered", "value");
       agentSpan.setSamplingPriority(PrioritySampling.USER_KEEP, SamplingMechanism.DEFAULT);
       agentSpan.finish();
