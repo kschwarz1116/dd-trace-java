@@ -3,11 +3,16 @@ package datadog.trace.core.tagprocessor;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.google.re2j.Pattern;
 import datadog.trace.api.DDTags;
+import datadog.trace.api.KnownTags;
 import datadog.trace.api.TagMap;
 import datadog.trace.bootstrap.instrumentation.api.Tags;
+import datadog.trace.core.DDSpanContext;
 import datadog.trace.test.util.DDJavaSpecification;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -177,5 +182,28 @@ class QueryObfuscatorTest extends DDJavaSpecification {
 
     assertEquals(query, unsafeTags.getObject(DDTags.HTTP_QUERY));
     assertEquals("http://site.com/index?" + query, unsafeTags.getObject(Tags.HTTP_URL));
+
+  @TableTest({
+    "spanType | retainQuery",
+    "http     | false      ",
+    "web      | true       "
+  })
+  void otelClientQueryIsOnlyUsedToBuildUrlFull(String spanType, boolean retainQuery) {
+    QueryObfuscator obfuscator = new QueryObfuscator(null, true);
+    DDSpanContext spanContext = mock(DDSpanContext.class);
+    when(spanContext.getSpanType()).thenReturn(spanType);
+
+    TagMap tags = TagMap.create();
+    tags.put(Tags.HTTP_URL, "http://site.com/index#fragment");
+    tags.put(KnownTags.URL_QUERY_NAME, "token=secret");
+
+    obfuscator.processTags(tags, spanContext, link -> {});
+
+    assertEquals("http://site.com/index?<redacted>#fragment", tags.get(Tags.HTTP_URL));
+    if (retainQuery) {
+      assertEquals("<redacted>", tags.get(KnownTags.URL_QUERY_NAME));
+      return;
+    }
+    assertNull(tags.get(KnownTags.URL_QUERY_NAME));
   }
 }
