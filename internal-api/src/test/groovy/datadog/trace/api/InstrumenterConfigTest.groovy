@@ -3,6 +3,9 @@ package datadog.trace.api
 import datadog.trace.config.inversion.ConfigHelper
 import datadog.trace.test.util.DDSpecification
 
+import static datadog.environment.JavaVirtualMachine.isJavaVersionAtLeast
+import static datadog.trace.api.config.TraceInstrumentationConfig.RUNTIME_CONTEXT_MAP_PER_STORE
+
 class InstrumenterConfigTest extends DDSpecification {
 
   def strictness
@@ -149,6 +152,35 @@ class InstrumenterConfigTest extends DDSpecification {
 
     where:
     preset << ['INVALID', '']
+  }
+
+  def "shared context storage is default from Java 25"() {
+    expect:
+    InstrumenterConfig.get().isRuntimeContextMapPerStore() == !isJavaVersionAtLeast(25)
+  }
+
+  def "context map per store configuration: #scenario"() {
+    setup:
+    if (environment != null) {
+      injectEnvConfig("DD_TRACE_RUNTIME_CONTEXT_MAP_PER_STORE", environment)
+    }
+    if (property != null) {
+      injectSysConfig(RUNTIME_CONTEXT_MAP_PER_STORE, property)
+    }
+
+    expect:
+    InstrumenterConfig.get().isRuntimeContextMapPerStore() == expected
+
+    where:
+    // spotless:off
+    scenario                              | property | environment | expected
+    "Enable map per store with property"  | "true"   | null        | true
+    "Disable map per store with property" | "false"  | null        | false
+    "Enable map per store with env"       | null     | "true"      | true
+    "Disable map per store with env"      | null     | "false"     | false
+    "Property true overrides env false"   | "true"   | "false"     | true
+    "Property false overrides env true"   | "false"  | "true"      | false
+    // spotless:on
   }
 
   def "appsec enabled = #input"() {
