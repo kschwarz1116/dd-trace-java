@@ -74,10 +74,11 @@ class DumpHangedTestIntegrationTest : GradleFixture() {
 
   @Test
   fun `should take dumps`() {
-    val output = runGradleTest(testSleepMillis = 25_0000)
+    // Leave time for the all-JVM thread sweep before heap collection and the task timeout.
+    val output = runGradleTest(testSleepMillis = 250_000, dumpOffset = 15)
 
     // Assert Gradle output has evidence of taking dumps.
-    assertTrue(output.contains("Taking dumps after 15 seconds delay for :test"))
+    assertTrue(output.contains("Taking dumps after 5 seconds delay for :test"))
     assertTrue(output.contains("Requesting stop of task ':test' as it has exceeded its configured timeout of 20s."))
     assertTrue(buildDir.exists()) // Assert build happened.
 
